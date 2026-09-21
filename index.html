@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Agency Enterprise Dashboard - MVVM</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- jsPDF & AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-full font-sans antialiased text-slate-800 bg-slate-50">
+
+    <div class="min-h-full flex flex-col md:flex-row">
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-800">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-6 flex items-center justify-between border-b border-slate-800">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-sky-500/30">
+                            <i class="fa-solid fa-plane-departure text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-white text-base tracking-wide leading-tight">WanderLust</h1>
+                            <p class="text-xs text-sky-400 font-medium">Agency Manager</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1.5">
+                    <button id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-sky-600/10 text-sky-400 border border-sky-500/20">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button id="nav-packages" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-map-location-dot w-5 text-center"></i>
+                        <span>Packages</span>
+                    </button>
+                    <button id="nav-customers" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-users w-5 text-center"></i>
+                        <span>Bookings</span>
+                    </button>
+                    <button id="nav-reports" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
+                        <span>GST & Tax Reports</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Database Connection Status Badge -->
+            <div class="p-4 border-t border-slate-800">
+                <div class="bg-slate-800/80 rounded-xl p-3 flex items-center space-x-3 border border-slate-700/50">
+                    <span id="db-status-ping" class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span id="db-status-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <div class="overflow-hidden">
+                        <p id="db-status-title" class="text-xs font-semibold text-white truncate">Connecting DB...</p>
+                        <p id="db-status-subtitle" class="text-[10px] text-slate-400 truncate">Firebase Firestore</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content View Container -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+            <!-- Top App Bar -->
+            <header class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 id="page-title" class="text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Real-time travel metrics, booking analytics, and GST revenue logs.</p>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <button id="btn-open-package-modal" class="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition-all shadow-sm">
+                        <i class="fa-solid fa-plus text-sky-600"></i>
+                        <span>New Package</span>
+                    </button>
+                    <button id="btn-open-customer-modal" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-sky-600/20">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Add Booking</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="p-6 space-y-6 max-w-7xl w-full mx-auto">
+                <!-- Global Filter Bar -->
+                <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-wrap items-center gap-4">
+                    <div class="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-wider pr-2 border-r border-slate-200">
+                        <i class="fa-solid fa-filter text-sky-500"></i>
+                        <span>Filters</span>
+                    </div>
+
+                    <div class="flex-1 min-w-[140px]">
+                        <select id="filter-year" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">All Years</option>
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                        </select>
+                    </div>
+
+                    <div class="flex-1 min-w-[140px]">
+                        <select id="filter-month" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">All Months</option>
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5">June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9">October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                    </div>
+
+                    <div class="flex-1 min-w-[180px]">
+                        <select id="filter-package" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">All Destinations / Packages</option>
+                        </select>
+                    </div>
+
+                    <div class="flex-[1.5] min-w-[200px] relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="filter-search" type="text" placeholder="Search customer name, phone, email..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+
+                    <button id="btn-reset-filters" class="text-xs text-slate-400 hover:text-slate-600 font-medium px-2 py-1">
+                        Reset
+                    </button>
+                </section>
+
+                <!-- KPI Metric Cards Grid -->
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Travelers</span>
+                            <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpi-customers" class="text-2xl font-extrabold text-slate-900 mt-2">0</h3>
+                        <p class="text-[11px] text-slate-500 mt-1">Confirmed customer bookings</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Revenue Collected</span>
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i class="fa-solid fa-indian-rupee-sign"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpi-collected" class="text-2xl font-extrabold text-emerald-600 mt-2">₹0</h3>
+                        <p class="text-[11px] text-slate-500 mt-1">Advance & completed payments</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Balance</span>
+                            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpi-remaining" class="text-2xl font-extrabold text-rose-600 mt-2">₹0</h3>
+                        <p class="text-[11px] text-slate-500 mt-1">Uncollected customer balances</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Packages</span>
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                <i class="fa-solid fa-route"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpi-packages" class="text-2xl font-extrabold text-indigo-600 mt-2">0</h3>
+                        <p class="text-[11px] text-slate-500 mt-1">Destinations available</p>
+                    </div>
+                </section>
+
+                <!-- SECTION 1: DASHBOARD VIEW -->
+                <div id="view-dashboard" class="space-y-6">
+                    <!-- Analytics Chart Container -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Monthly Revenue Analytics</h3>
+                                <p class="text-xs text-slate-400">Collected advance/final revenue vs. pending balance breakdown</p>
+                            </div>
+                            <span class="text-xs font-medium text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">Financial Overview</span>
+                        </div>
+                        <div class="h-72 w-full">
+                            <canvas id="chart-revenue"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Bookings Table Snapshot -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Recent Travel Bookings</h3>
+                                <p class="text-xs text-slate-400">Live feed of registered customers and payment status</p>
+                            </div>
+                            <button id="btn-view-all-customers" class="text-xs font-bold text-sky-600 hover:text-sky-700">View All</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                        <th class="py-3.5 px-6">Customer</th>
+                                        <th class="py-3.5 px-6">Package</th>
+                                        <th class="py-3.5 px-6">Travel Date</th>
+                                        <th class="py-3.5 px-6">Total Cost</th>
+                                        <th class="py-3.5 px-6">Paid Advance</th>
+                                        <th class="py-3.5 px-6">Remaining</th>
+                                        <th class="py-3.5 px-6">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-dashboard-recent" class="divide-y divide-slate-100 text-xs">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: PACKAGES MANAGER VIEW -->
+                <div id="view-packages" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Manage Tour Packages</h3>
+                                <p class="text-xs text-slate-400">Create and update destination offerings and pricing</p>
+                            </div>
+                            <button id="btn-add-package-alt" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 rounded-xl text-xs">
+                                <i class="fa-solid fa-plus mr-1"></i> Add Destination
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="grid-packages">
+                            <!-- Dynamic Package Cards -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: BOOKINGS MANAGER VIEW -->
+                <div id="view-customers" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Customer Booking Records</h3>
+                                <p class="text-xs text-slate-400">Complete payment tracking and customer contact list</p>
+                            </div>
+                            <button id="btn-add-customer-alt" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 rounded-xl text-xs">
+                                <i class="fa-solid fa-user-plus mr-1"></i> New Customer Booking
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                        <th class="py-3.5 px-6">Customer Details</th>
+                                        <th class="py-3.5 px-6">Package</th>
+                                        <th class="py-3.5 px-6">Travel Date</th>
+                                        <th class="py-3.5 px-6">Total Amount</th>
+                                        <th class="py-3.5 px-6">Advance Paid</th>
+                                        <th class="py-3.5 px-6">Remaining</th>
+                                        <th class="py-3.5 px-6">Status</th>
+                                        <th class="py-3.5 px-6 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-customers-full" class="divide-y divide-slate-100 text-xs">
+                                    <!-- Dynamic Full Customer Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: GST & ITR REPORTS VIEW -->
+                <div id="view-reports" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 max-w-2xl mx-auto">
+                        <div class="text-center max-w-md mx-auto space-y-2">
+                            <div class="w-12 h-12 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center mx-auto text-xl shadow-inner">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <h3 class="font-extrabold text-slate-900 text-lg">Generate Annual GST / ITR Tax Report</h3>
+                            <p class="text-xs text-slate-500">Export audited annual financial summaries including gross collections, pending balances, and itemized booking audit logs.</p>
+                        </div>
+
+                        <div class="mt-8 space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Financial Year Selection</label>
+                                <select id="report-year" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-sky-500">
+                                    <option value="2026">FY 2026 - 2027</option>
+                                    <option value="2025" selected>FY 2025 - 2026</option>
+                                    <option value="2024">FY 2024 - 2025</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Agency Business Name / GSTIN</label>
+                                <input id="report-business-name" type="text" value="WanderLust Travels India (GSTIN: 32AAAAA0000A1Z5)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-sky-500">
+                            </div>
+
+                            <div class="pt-4">
+                                <button id="btn-generate-pdf" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-download"></i>
+                                    <span>Download GST / ITR Audit PDF Report</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL 1: ADD/EDIT PACKAGE -->
+    <div id="modal-package" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="modal-package-title" class="font-bold text-slate-900 text-base">Add New Travel Package</h3>
+                <button class="btn-close-modal text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+            <form id="form-package" class="p-6 space-y-4">
+                <input type="hidden" id="package-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Destination Name</label>
+                    <input type="text" id="package-destination" required placeholder="e.g. Manali Adventure Tour" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Travel Departure Date</label>
+                    <input type="date" id="package-date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Price Per Person (₹)</label>
+                    <input type="number" id="package-price" min="0" required placeholder="e.g. 15000" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-xs font-bold">Save Package</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD/EDIT CUSTOMER BOOKING -->
+    <div id="modal-customer" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="modal-customer-title" class="font-bold text-slate-900 text-base">New Customer Booking</h3>
+                <button class="btn-close-modal text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+            <form id="form-customer" class="p-6 space-y-4 overflow-y-auto">
+                <input type="hidden" id="customer-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Customer Name</label>
+                    <input type="text" id="customer-name" required placeholder="Full Name" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Gender</label>
+                    <select id="customer-gender" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                    <input type="tel" id="customer-phone" required placeholder="+91 9876543210" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="customer-email" placeholder="customer@example.com" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+            </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Select Package Destination</label>
+                    <select id="customer-package-id" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none">
+                        <!-- Dynamic Packages Options -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Travel Departure Date</label>
+                    <input type="date" id="customer-travel-date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Total Price (₹)</label>
+                        <input type="number" id="customer-total" min="0" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Advance Paid (₹)</label>
+                        <input type="number" id="customer-advance" min="0" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Remaining (₹)</label>
+                        <input type="number" id="customer-remaining" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 outline-none cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-xl text-xs font-bold">Save Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script Loader (Modules in Dependency Order) -->
+    <script src="js/config/firebase.config.js"></script>
+    <script src="js/models/Package.js"></script>
+    <script src="js/models/Customer.js"></script>
+    <script src="js/services/FirestoreService.js"></script>
+    <script src="js/services/LocalStorageService.js"></script>
+    <script src="js/services/PdfReportService.js"></script>
+    <script src="js/viewmodels/DashboardViewModel.js"></script>
+    <script src="js/views/AppView.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
